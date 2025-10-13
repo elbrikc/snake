@@ -1,9 +1,12 @@
-import driver
-from machine import Pin,PWM
-import utime
+from machine import Pin,SPI,PWM
+import framebuf
+import time
+import os
 import math
+import driver
+import random
 
-def colour(R,G,B):
+def rgb(R,G,B):
 # Get RED value
     rp = int(R*31/255) # range 0 to 31
     if rp < 0: rp = 0
@@ -24,134 +27,138 @@ def colour(R,G,B):
     b = bp *256
     colour = r+g+b
     return colour
+
+
+def mp(x,y,colour):
+    # Draw mega pixel (10x10), indexed in ascending integer coords
+    LCD.fill_rect(x*10,y*10,10,10,colour)
+
+
+def tgt(snake):
+    tgt_x = random.randint(0,23)
+    tgt_y = random.randint(0,23)
     
-def ring(cx,cy,r,cc):   # Draws a circle - with centre (x,y), radius, colour 
-    for angle in range(91):  # 0 to 90 degrees in 2s
-        y3=int(r*math.sin(math.radians(angle)))
-        x3=int(r*math.cos(math.radians(angle)))
-        LCD.pixel(cx-x3,cy+y3,cc)  # 4 quadrants
-        LCD.pixel(cx-x3,cy-y3,cc)
-        LCD.pixel(cx+x3,cy+y3,cc)
-        LCD.pixel(cx+x3,cy-y3,cc)
-  
-# =========== Main ============
-BL = 13  # Pins used for display screen
-
-pwm = PWM(Pin(BL)) # Screen Brightness
-pwm.freq(1000)
-pwm.duty_u16(32768) # max 65535 - mid value
-
-LCD = driver.LCD_1inch3()
-# Background colour - dark grey
-LCD.fill(colour(40,40,40))
-LCD.show()
-
-# Define pins for buttons and Joystick
-keyA = Pin(15,Pin.IN,Pin.PULL_UP) # Normally 1 but 0 if pressed
-keyB = Pin(17,Pin.IN,Pin.PULL_UP)
-keyX = Pin(19,Pin.IN,Pin.PULL_UP)
-keyY= Pin(21,Pin.IN,Pin.PULL_UP)
-
-up = Pin(2,Pin.IN,Pin.PULL_UP)
-down = Pin(18,Pin.IN,Pin.PULL_UP)
-left = Pin(16,Pin.IN,Pin.PULL_UP)
-right = Pin(20,Pin.IN,Pin.PULL_UP)
-ctrl = Pin(3,Pin.IN,Pin.PULL_UP)
-
-# Draw background, frame, title and instructions
-LCD.rect(0,0,240,240,LCD.red) # Red edge
-# White Corners
-LCD.pixel(1,1,LCD.white)     # LT
-LCD.pixel(0,239,LCD.white)   # LB
-LCD.pixel(239,0,LCD.white)   # RT
-LCD.pixel(239,239,LCD.white) # RB
-LCD.text('WS 1.3" IPS Display', 20, 10, colour(0,0,255))
-LCD.text('  240x240 pixels', 20, 20, colour(0,0,255))
-LCD.text('Use your joystick', 25, 33, colour(255,255,0))
-LCD.text('   and buttons', 25, 43, colour(255,255,0))
-LCD.text("Press A & Y to", 30, 200, colour(255,0,0))
-LCD.text(" Halt program", 30, 220, colour(255,0,0))
-LCD.show()
-
-running = True # Loop control
-# =========== Main loop ===============
-while(running):
-    if keyA.value() == 0:
-        LCD.fill_rect(200,15,30,30,colour(255,255,0)) # Yellow
-        print("A")
-    else :
-        LCD.fill_rect(200,15,30,30,LCD.white)
-        LCD.rect(200,15,30,30,LCD.red)            
-        
-    if(keyB.value() == 0):
-        LCD.fill_rect(200,75,30,30,colour(255,0,255)) # Magenta
-        print("B")
-    else :
-        LCD.fill_rect(200,75,30,30,LCD.white)
-        LCD.rect(200,75,30,30,LCD.red)
-                   
-    if(keyX.value() == 0):
-        LCD.fill_rect(200,135,30,30,colour(0,255,255)) # Cyan
-        print("X")
-    else :
-        LCD.fill_rect(200,135,30,30,LCD.white)
-        LCD.rect(200,135,30,30,LCD.red)
-        
-    if(keyY.value() == 0):
-        LCD.fill_rect(200,195,30,30,colour(255,180,50)) # Orange
-        print("Y")
-    else :
-        LCD.fill_rect(200,195,30,30,LCD.white)
-        LCD.rect(200,195,30,30,LCD.red)
-        
-    if(up.value() == 0):
-        LCD.fill_rect(60,60,30,30,LCD.red)
-        print("UP")
-    else :
-        LCD.fill_rect(60,60,30,30,LCD.white)
-        LCD.rect(60,60,30,30,LCD.red)
-        
-    if(down.value() == 0):
-        LCD.fill_rect(60,150,30,30,LCD.red)
-        print("DOWN")
-    else :
-        LCD.fill_rect(60,150,30,30,LCD.white)
-        LCD.rect(60,150,30,30,LCD.red)
-        
-    if(left.value() == 0):
-        LCD.fill_rect(15,105,30,30,LCD.red)
-        print("LEFT")
-    else :
-        LCD.fill_rect(15,105,30,30,LCD.white)
-        LCD.rect(15,105,30,30,LCD.red)
+    checked = False
+    while not checked:
+        checked = True
+        for i in snake:
+            if i == [tgt_x,tgt_y]:
+                tgt_x = random.randint(0,23)
+                tgt_y = random.randint(0,23)
+                checked = False
     
-    if(right.value() == 0):
-        LCD.fill_rect(105,105,30,30,LCD.red)
-        print("RIGHT")
-    else :
-        LCD.fill_rect(105,105,30,30,LCD.white)
-        LCD.rect(105,105,30,30,LCD.red)
+    return tgt_x,tgt_y
+
+
+def pause():
+    unpause = 0
+    while unpause == 0:
+        LCD.fill_rect(40,40,160,160,rgb(255,255,255))
+        LCD.fill_rect(81,70,26,100,rgb(0,0,0))
+        LCD.fill_rect(133,70,26,100,rgb(0,0,0))
+        LCD.show()
+        time.sleep(1)
+        if Y.value() == 0:
+            unpause = 1
+
+
+def check_fail(nose,snake):
+    for i in snake[1:]:
+        if nose == i:
+    #if X.value() == 0:
+           while True:
+                LCD.fill(0)
+                LCD.text('YOU ARE',85,60,rgb(255,255,255))
+                LCD.text('ded.',100,80,rgb(255,0,0))
+                LCD.text('FUCK YOU',80,100,rgb(255,255,255))
+                LCD.text('Cycle power to replay',30,140,rgb(255,255,255))
+                LCD.show()
+
+
+if __name__ == '__main__':
+
+    score = 0
+    tstep = 0.3
     
-    if(ctrl.value() == 0):
-        LCD.fill_rect(60,105,30,30,LCD.red)
-        print("CTRL")
-    else :
-        LCD.fill_rect(60,105,30,30,LCD.white)
-        LCD.rect(60,105,30,30,LCD.red)
-                   
-    LCD.show()
-    if (keyA.value() == 0) and (keyY.value() == 0): # Halt looping?
-        running = False
+    BL = 13
+
+    pwm = PWM(Pin(BL)) # Screen Brightness
+    pwm.freq(1000)
+    pwm.duty_u16(32768) # max 65535 - mid value
+
+    LCD = driver.LCD_1inch3()
+    
+    A = Pin(15,Pin.IN,Pin.PULL_UP) # Normally 1 but 0 if pressed
+    B = Pin(17,Pin.IN,Pin.PULL_UP)
+    X = Pin(19,Pin.IN,Pin.PULL_UP)
+    Y = Pin(21,Pin.IN,Pin.PULL_UP)
+
+    U = Pin(2,Pin.IN,Pin.PULL_UP)
+    D = Pin(18,Pin.IN,Pin.PULL_UP)
+    L = Pin(16,Pin.IN,Pin.PULL_UP)
+    R = Pin(20,Pin.IN,Pin.PULL_UP)
+    C = Pin(3,Pin.IN,Pin.PULL_UP)
+
+    LCD.fill(0)
+    
+    snake = [[12,12],[11,12],[10,12]]
+    dx = 1
+    dy = 0
+    back = ''
+    
+    tgt_x,tgt_y = tgt(snake)
+    
+    while True:
+        LCD.fill(0)
+            
+        if U.value() == 0 and back != 'U':
+            dx = 0
+            dy = -1
+            back = 'D'
+        if D.value() == 0 and back != 'D':
+            dx = 0
+            dy = 1
+            back = 'U'
+        if L.value() == 0 and back != 'L':
+            dx = -1
+            dy = 0
+            back = 'R'
+        if R.value() == 0 and back != 'R':
+            dx = 1
+            dy = 0
+            back = 'L'
+        #if Y.value() == 0:
+            #print(Y.value())
+            #pause()
         
-    utime.sleep(.15) # Debounce delay - reduce multiple button reads
-    
-# Finish
-LCD.fill(0)
-for r in range(10):
-    ring(120,120,60+r,colour(255,255,0))
-LCD.text("Halted", 95, 115, colour(255,0,0))
-LCD.show()
-# Tidy up
-utime.sleep(3)
-LCD.fill(0)
-LCD.show()
+        del snake[-1]
+        nose = [(snake[0][0]+dx)%24, (snake[0][1]+dy)%24]
+        snake.insert(0,nose)
+        for i in range(len(snake)):
+                mp(snake[i][0],snake[i][1],rgb(0,255,255))
+
+        check_fail(nose,snake)
+
+        LCD.text('SCORE: ',160,10,rgb(255,255,255))
+        LCD.text(str(score),210,10,rgb(255,0,255))
+
+        if [tgt_x,tgt_y] == nose:
+            score += 1
+            if tstep >= 0.05:
+                tstep -= 0.01
+            print(tstep)
+            if (snake[-1][0] - snake[-2][0]) == 0:
+                d = snake[-2][1]+snake[-1][1]
+                snake.append([snake[-1][0]-d,snake[-1][0]])
+            if (snake[-1][1] - snake[-2][1]) == 0:
+                d = snake[-2][0]+snake[-1][0]
+                snake.append([snake[-1][1]-d,snake[-1][1]])
+            
+            tgt_x,tgt_y = tgt(snake)
+
+        mp(tgt_x,tgt_y,rgb(255,255,0))
+
+        LCD.show()
+        time.sleep(tstep)
+
+
