@@ -1,6 +1,6 @@
-# Project Title
+# Waveshare Pico LCD 1.3 Snake game
 
-Simple overview of use/purpose.
+Snake game for micro handheld console - Waveshare LCD header compatible with Raspberry Pi Pico.
 
 ## Description
 
