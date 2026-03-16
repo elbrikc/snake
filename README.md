@@ -29,8 +29,8 @@ Project is not currently being worked on as I gave my Pico and LCD header away a
 
 Contributors names and contact info
 
-ex. elbrikc  
-ex. Idk send me a carrier pidgeon or something
+- elbrikc  
+    Idk send me a carrier pigeon or something
 
 ## Version History
 
